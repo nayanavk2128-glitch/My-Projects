@@ -1,0 +1,2551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport-fit=cover uses the full screen; user-scalable=no stops accidental pinch-zoom -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A0614" />
+  <title>XOX Arena</title>
+  <style>
+/* ==========================================================================
+   XOX ARENA — stylesheet
+   Dark base, neon blue/purple accents, animated screens and board.
+   Uses system fonts only so the app works fully offline.
+   ========================================================================== */
+
+:root {
+  --bg: #0a0614;
+  --panel: rgba(255, 255, 255, 0.04);
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #edeaff;
+  --muted: #8d85aa;
+  --x: #27f3ff;          /* neon blue  -> X */
+  --o: #b55cff;          /* neon purple -> O */
+  --neon-blue: #27f3ff;
+  --neon-purple: #b55cff;
+  --danger: #ff4d7a;
+  --ok: #4dffb4;
+  --radius: 18px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---------- Base resets ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;                 /* no page scrolling: screens scroll themselves */
+  overscroll-behavior: none;        /* no bounce / pull-to-refresh */
+  overflow-x: hidden;               /* prevent accidental horizontal scrolling */
+  touch-action: manipulation;       /* no double-tap zoom delay */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+svg,
+img {
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- Background ---------- */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(39, 243, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(181, 92, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(circle at 50% 30%, #000 30%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow {
+  position: fixed;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+  animation: drift 14s ease-in-out infinite alternate;
+}
+.g1 { background: var(--neon-blue); top: -120px; left: -120px; }
+.g2 { background: var(--neon-purple); bottom: -140px; right: -120px; animation-delay: -6s; }
+
+@keyframes drift {
+  to { transform: translate(40px, 30px) scale(1.1); }
+}
+
+/* ---------- App shell & screens (slide/fade transitions) ---------- */
+#app {
+  position: fixed;
+  inset: 0;
+  z-index: 1;   /* screens inside handle their own padding */
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  max-width: 520px;            /* keeps content centred and readable on wide or zoomed-out windows */
+  margin: 0 auto;
+  padding: calc(var(--safe-top) + 14px) 16px calc(var(--safe-bottom) + 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  opacity: 0;
+  transform: translateX(28px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.screen.active {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* ---------- Home hero ---------- */
+.hero {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.logo {
+  width: 110px;
+  height: 110px;
+  filter: drop-shadow(0 0 14px rgba(39, 243, 255, 0.5));
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  50% { transform: translateY(-8px); }
+}
+
+.title {
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.neon-blue {
+  color: var(--neon-blue);
+  text-shadow: 0 0 12px rgba(39, 243, 255, 0.8);
+}
+
+.neon-purple {
+  color: var(--neon-purple);
+  text-shadow: 0 0 12px rgba(181, 92, 255, 0.8);
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
+.menu {
+  margin-top: 24px;
+  margin-bottom: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: rise 0.6s ease both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+}
+
+.footer-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  color: #0a0614;
+  border: none;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  box-shadow: 0 0 24px rgba(39, 243, 255, 0.35), 0 0 40px rgba(181, 92, 255, 0.25);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.btn-danger {
+  color: #fff;
+  border: none;
+  background: linear-gradient(135deg, #ff4d7a, #ff2e63);
+}
+
+.icon-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:active { transform: scale(0.92); }
+
+.icon-btn.muted {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 46px;
+}
+
+.screen-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spacer { width: 46px; }
+
+.mode-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--neon-blue);
+  text-shadow: 0 0 10px rgba(39, 243, 255, 0.6);
+}
+
+/* ---------- Cards & forms ---------- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px;
+  border-radius: 14px;
+}
+
+.segmented button,
+.symbol-pick button {
+  padding: 12px 6px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.segmented button.selected,
+.symbol-pick button.selected {
+  color: #0a0614;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  box-shadow: 0 0 16px rgba(39, 243, 255, 0.4);
+}
+
+.symbol-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.symbol-pick button {
+  height: 84px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 14px;
+}
+
+.symbol-pick button.selected {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--neon-blue);
+}
+
+.symbol-pick .mark { width: 100%; height: 100%; }
+
+/* Switch toggles */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.switch-row input { position: absolute; opacity: 0; pointer-events: none; }
+
+.switch {
+  width: 52px;
+  height: 30px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+  transition: background 0.25s ease;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s ease;
+}
+
+.switch-row input:checked + .switch {
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+}
+
+.switch-row input:checked + .switch::after {
+  transform: translateX(22px);
+}
+
+/* ---------- Symbols (X and O drawn with animated SVG strokes) ---------- */
+.mark {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  overflow: visible;
+}
+
+.mark-x { stroke: var(--x); filter: drop-shadow(0 0 6px var(--x)); }
+.mark-o { stroke: var(--o); filter: drop-shadow(0 0 6px var(--o)); }
+
+/* pathLength="1" in the markup lets us animate strokes from 0 to full length */
+.mark line,
+.mark circle {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 0.45s ease forwards;
+}
+
+.mark line:nth-child(2) { animation-delay: 0.12s; }
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.sym-x { color: var(--x); text-shadow: 0 0 10px var(--x); }
+.sym-o { color: var(--o); text-shadow: 0 0 10px var(--o); }
+
+/* ---------- Scoreboard & status ---------- */
+.scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+}
+
+.score-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.score-card.draw {
+  min-width: 88px;
+  justify-content: center;
+}
+
+.score-card .sym {
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.score-card .who {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.score-card .count {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.score-card.bump {
+  animation: bump 0.5s ease;
+}
+
+@keyframes bump {
+  40% { transform: scale(1.12); box-shadow: 0 0 22px rgba(39, 243, 255, 0.45); }
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.round-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.round-pill span { color: var(--text); }
+
+.turn {
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.turn[data-turn="X"] { color: var(--x); }
+.turn[data-turn="O"] { color: var(--o); }
+
+/* ---------- Board ---------- */
+.board-wrap {
+  position: relative;
+  flex: 0 0 auto;                 /* never shrink: keeps the board square and fully visible */
+  width: min(88vw, 40vh, 420px);
+  aspect-ratio: 1;
+  margin: 4px auto;
+  border-radius: 26px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(39, 243, 255, 0.25);
+  box-shadow: 0 0 34px rgba(39, 243, 255, 0.12), inset 0 0 30px rgba(181, 92, 255, 0.08);
+  overflow: hidden;
+}
+
+/* The grid has no gaps; each cell has a 6px margin so the strike line maths stays simple */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.cell {
+  position: relative;
+  margin: 6px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, var(--cell-a), var(--cell-b));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16%;
+  transition: transform 0.15s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cell:active { transform: scale(0.94); }
+
+.cell.win {
+  background: linear-gradient(160deg, rgba(39, 243, 255, 0.22), rgba(181, 92, 255, 0.22));
+  box-shadow: 0 0 22px rgba(39, 243, 255, 0.45) inset;
+  animation: pulse 0.9s ease-in-out infinite alternate;
+}
+
+.cell.lose {
+  opacity: 0.45;
+}
+
+@keyframes pulse {
+  to { box-shadow: 0 0 34px rgba(181, 92, 255, 0.6) inset; }
+}
+
+.strike {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.strike line {
+  stroke: #ffffff;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 6px var(--neon-blue)) drop-shadow(0 0 12px var(--neon-purple));
+  opacity: 0;
+}
+
+.strike.show line {
+  opacity: 1;
+  animation: draw 0.5s ease forwards;
+}
+
+/* Result banner */
+.result {
+  min-height: 36px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.4s ease;
+}
+
+.result.show {
+  opacity: 1;
+  transform: none;
+}
+
+.result.win { color: var(--ok); text-shadow: 0 0 14px rgba(77, 255, 180, 0.6); }
+.result.lose { color: var(--danger); text-shadow: 0 0 14px rgba(255, 77, 122, 0.6); }
+.result.draw { color: var(--text); text-shadow: 0 0 14px rgba(255, 255, 255, 0.4); }
+
+.board-wrap.shake {
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* ---------- Controls & history ---------- */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.controls .btn { padding: 14px 8px; font-size: 0.95rem; }
+
+/* The game screen itself does not scroll; only the history list scrolls inside its card */
+#screen-game {
+  overflow: hidden;            /* no page scrolling: everything fits the window at any zoom */
+  gap: 8px;
+}
+
+/* History takes whatever space is left and scrolls inside its own box */
+.history {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.history ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.hist-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid var(--muted);
+  animation: rise 0.35s ease both;
+}
+
+.hist-item.p1 { border-color: var(--x); }
+.hist-item.p2 { border-color: var(--o); }
+.hist-item.draw { border-color: var(--muted); }
+
+.hist-text { font-weight: 700; font-size: 0.92rem; }
+.hist-meta { font-size: 0.74rem; color: var(--muted); }
+
+.empty {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.rules {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  line-height: 1.45;
+  font-size: 0.95rem;
+}
+
+.rules strong { color: var(--neon-blue); }
+
+/* ---------- Modal & toast ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(5, 2, 12, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid rgba(181, 92, 255, 0.4);
+  border-radius: 22px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 0 40px rgba(181, 92, 255, 0.25);
+  animation: pop 0.25s ease;
+}
+
+.modal-card h3 { font-size: 1.15rem; }
+.modal-card p { color: var(--muted); line-height: 1.4; }
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes pop { from { transform: scale(0.9); opacity: 0; } }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 24px);
+  transform: translate(-50%, 30px);
+  background: var(--surface);
+  border: 1px solid var(--neon-blue);
+  color: var(--text);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 50;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- Confetti ---------- */
+#fx {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 30;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fall {
+  to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+/* ==========================================================================
+   v2 additions: themes, power-ups, timer, streak, trophies, names, tutorial
+   ========================================================================== */
+
+/* Themes: neon is the default (see :root above). Retro and Light override the variables. */
+:root {
+  --surface: #140d26;
+  --cell-a: #1b1236;
+  --cell-b: #0e0920;
+}
+
+:root[data-theme="retro"] {
+  --bg: #06140a;
+  --text: #d8ffd0;
+  --muted: #6fae65;
+  --panel: rgba(120, 255, 120, 0.05);
+  --line: rgba(120, 255, 120, 0.18);
+  --x: #ffb000;
+  --o: #39ff14;
+  --neon-blue: #ffb000;
+  --neon-purple: #39ff14;
+  --surface: #0b2010;
+  --cell-a: #0f2a16;
+  --cell-b: #07150b;
+}
+
+:root[data-theme="light"] {
+  --bg: #f3f0ff;
+  --text: #1b1433;
+  --muted: #6b6390;
+  --panel: rgba(255, 255, 255, 0.7);
+  --line: rgba(27, 20, 51, 0.12);
+  --x: #0096c7;
+  --o: #7b2ff7;
+  --neon-blue: #0096c7;
+  --neon-purple: #7b2ff7;
+  --surface: #ffffff;
+  --cell-a: #ffffff;
+  --cell-b: #ece7ff;
+}
+
+:root[data-theme="light"] .glow { opacity: 0.15; }
+
+/* Power-ups */
+.power-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.power-btn {
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  transition: all 0.2s ease;
+}
+
+.power-btn:disabled {
+  opacity: 0.4;
+}
+
+.power-btn.active {
+  color: var(--neon-blue);
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 16px rgba(39, 243, 255, 0.4);
+}
+
+/* Frozen and selected cells */
+.cell.frozen {
+  border: 1px dashed var(--neon-blue);
+  box-shadow: inset 0 0 18px rgba(39, 243, 255, 0.3);
+}
+
+.cell.frozen::after {
+  content: "FROZEN";
+  position: absolute;
+  bottom: 8px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--neon-blue);
+}
+
+.cell.selected {
+  outline: 2px solid var(--neon-purple);
+  outline-offset: -4px;
+}
+
+/* Fast-mode timer bar */
+.timer {
+  width: min(88vw, 40vh, 420px);
+  height: 8px;
+  margin: 0 auto;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.timer-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+  transition: width 0.1s linear;
+}
+
+.timer-fill.low {
+  background: var(--danger);
+}
+
+/* Streak pill */
+.streak {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(77, 255, 180, 0.12);
+  color: var(--ok);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* Achievements list */
+.trophy-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trophy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.trophy.locked {
+  opacity: 0.45;
+}
+
+.trophy-icon {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  color: #0a0614;
+  font-weight: 900;
+}
+
+.trophy.locked .trophy-icon {
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.trophy small {
+  color: var(--muted);
+}
+
+/* Player name inputs */
+.name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.name-row span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.name-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--neon-blue);
+}
+
+/* Tutorial dots */
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.dot.on {
+  background: var(--neon-blue);
+  box-shadow: 0 0 8px var(--neon-blue);
+}
+
+/* Game layout: game column + history column on wide windows */
+.game-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+@media (min-width: 760px) {
+  #screen-game {
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 8px;
+  }
+
+  #screen-game .topbar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  #screen-game .game-main {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  #screen-game .history {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+/* ---------- Small screens ---------- */
+@media (max-height: 680px) {
+  .logo { width: 80px; height: 80px; }
+  .title { font-size: 1.8rem; }
+  .menu { gap: 9px; }
+  .btn { padding: 13px; }
+  .scoreboard .count { font-size: 1.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+</style>
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="glow g1" aria-hidden="true"></div>
+  <div class="glow g2" aria-hidden="true"></div>
+  <div id="fx" aria-hidden="true"></div>
+
+  <div id="app">
+
+    <!-- ===================== HOME ===================== -->
+    <section class="screen active" id="screen-home" data-screen="home">
+      <div class="hero">
+        <svg class="logo" viewBox="0 0 512 512" aria-hidden="true">
+          <g fill="none" stroke-linecap="round" stroke-width="34">
+            <path d="M120 120 L232 232 M232 120 L120 232" stroke="#27F3FF" />
+            <circle cx="340" cy="340" r="70" stroke="#B55CFF" />
+          </g>
+        </svg>
+        <h1 class="title"><span class="neon-blue">XOX</span> <span class="neon-purple">ARENA</span></h1>
+        <p class="tagline">Think Smart. Play Bold. Win Big.</p>
+      </div>
+
+      <nav class="menu">
+        <button class="btn btn-primary" data-action="play-now">Play Now</button>
+        <button class="btn" data-action="two-player">Two Player Mode</button>
+        <button class="btn" data-action="ai-setup">Play Against AI</button>
+        <button class="btn" data-action="trophies">Achievements</button>
+        <button class="btn btn-ghost" data-action="how">How to Play</button>
+        <button class="btn btn-ghost" data-action="settings">Settings</button>
+      </nav>
+
+      <p class="footer-note" id="home-score"></p>
+    </section>
+
+    <!-- ===================== TWO PLAYER SETUP (enter names) ===================== -->
+    <section class="screen" id="screen-two" data-screen="two">
+      <header class="topbar">
+        <button class="icon-btn" data-action="back" aria-label="Back">&#8249;</button>
+        <h2 class="screen-title">Two Player</h2>
+        <span class="spacer"></span>
+      </header>
+
+      <div class="card">
+        <h3 class="label">Enter player names</h3>
+        <label class="name-row"><span>Player 1 (X) goes first</span>
+          <input class="name-input" id="two-p1" maxlength="14" type="text" placeholder="Player 1" autocomplete="off" />
+        </label>
+        <label class="name-row"><span>Player 2 (O)</span>
+          <input class="name-input" id="two-p2" maxlength="14" type="text" placeholder="Player 2" autocomplete="off" />
+        </label>
+      </div>
+
+      <button class="btn btn-primary" data-action="start-two">Start Match</button>
+    </section>
+
+    <!-- ===================== AI SETUP ===================== -->
+    <section class="screen" id="screen-ai" data-screen="ai">
+      <header class="topbar">
+        <button class="icon-btn" data-action="back" aria-label="Back">&#8249;</button>
+        <h2 class="screen-title">Play vs AI</h2>
+        <span class="spacer"></span>
+      </header>
+
+      <div class="card">
+        <h3 class="label">Difficulty</h3>
+        <div class="segmented" id="difficulty-group">
+          <button data-diff="easy">Easy</button>
+          <button data-diff="medium" class="selected">Medium</button>
+          <button data-diff="hard">Hard</button>
+        </div>
+        <p class="hint" id="diff-hint"></p>
+
+        <h3 class="label">Choose your symbol</h3>
+        <div class="symbol-pick" id="symbol-group">
+          <button data-sym="X" class="selected" aria-label="Play as X"></button>
+          <button data-sym="O" aria-label="Play as O"></button>
+        </div>
+        <p class="hint">X always goes first.</p>
+      </div>
+
+      <button class="btn btn-primary" data-action="start-ai">Start Match</button>
+    </section>
+
+    <!-- ===================== GAME ===================== -->
+    <section class="screen" id="screen-game" data-screen="game">
+      <header class="topbar">
+        <button class="icon-btn" data-action="back" aria-label="Back">&#8249;</button>
+        <div class="mode-label" id="mode-label">Two Player</div>
+        <button class="icon-btn" id="mute-btn" aria-label="Toggle sound">&#9834;</button>
+      </header>
+
+      <!-- Main game column (left on wide windows) -->
+      <div class="game-main">
+      <div class="scoreboard">
+        <div class="score-card" id="card-p1">
+          <span class="sym" id="p1-sym">X</span>
+          <span class="who" id="p1-name">Player 1</span>
+          <span class="count" id="p1-count">0</span>
+        </div>
+        <div class="score-card draw" id="card-draw">
+          <span class="who">Draws</span>
+          <span class="count" id="draw-count">0</span>
+        </div>
+        <div class="score-card" id="card-p2">
+          <span class="sym" id="p2-sym">O</span>
+          <span class="who" id="p2-name">Player 2</span>
+          <span class="count" id="p2-count">0</span>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div class="round-pill">Round <span id="round-num">1</span></div>
+        <div class="streak" id="streak" hidden></div>
+        <div class="turn" id="turn-text"></div>
+      </div>
+
+      <!-- Fast-mode countdown bar (shown only when the timer is on) -->
+      <div class="timer" id="timer" hidden><div class="timer-fill" id="timer-fill"></div></div>
+
+      <div class="board-wrap" id="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="Tic-tac-toe board"></div>
+        <svg class="strike" id="strike" viewBox="0 0 300 300" aria-hidden="true">
+          <line x1="0" y1="0" x2="0" y2="0" />
+        </svg>
+      </div>
+
+      <!-- Power-ups: each player gets one Freeze and one Swap per round -->
+      <div class="power-row" id="power-row">
+        <button class="power-btn" id="pwr-freeze" data-power="freeze">Freeze · 1</button>
+        <button class="power-btn" id="pwr-swap" data-power="swap">Swap · 1</button>
+      </div>
+
+      <div class="result" id="result" aria-live="polite"></div>
+
+      <div class="controls">
+        <button class="btn" data-action="restart-round">Restart Round</button>
+        <button class="btn btn-primary" data-action="new-game">New Game</button>
+      </div>
+      <button class="btn" id="share-btn" data-action="share" hidden>Share Result</button>
+
+      </div>
+
+      <!-- Match history (right side on wide windows, below on narrow ones) -->
+      <aside class="card history">
+        <h3 class="label">Match History</h3>
+        <ul id="history-list"></ul>
+      </aside>
+    </section>
+
+    <!-- ===================== ACHIEVEMENTS ===================== -->
+    <section class="screen" id="screen-trophies" data-screen="trophies">
+      <header class="topbar">
+        <button class="icon-btn" data-action="back" aria-label="Back">&#8249;</button>
+        <h2 class="screen-title">Achievements</h2>
+        <span class="spacer"></span>
+      </header>
+      <p class="hint" id="trophy-count"></p>
+      <ul class="trophy-list" id="trophy-list"></ul>
+    </section>
+
+    <!-- ===================== HOW TO PLAY ===================== -->
+    <section class="screen" id="screen-how" data-screen="how">
+      <header class="topbar">
+        <button class="icon-btn" data-action="back" aria-label="Back">&#8249;</button>
+        <h2 class="screen-title">How to Play</h2>
+        <span class="spacer"></span>
+      </header>
+      <div class="card">
+        <ol class="rules">
+          <li>Players take turns placing X and O on the 3 &times; 3 grid.</li>
+          <li>Line up three of your symbols across, down, or diagonally to win the round.</li>
+          <li>If the board fills with no line, the round is a draw.</li>
+          <li><strong>Power-ups:</strong> each round you get one Freeze (block a cell for your opponent's next turn) and one Swap (move one of your marks). Using one takes your turn.</li>
+          <li><strong>Fast mode:</strong> turn on the timer in Settings. If you run out of time, your opponent wins the round.</li>
+          <li><strong>Two Player:</strong> pass the phone. Player 1 uses X and goes first.</li>
+          <li><strong>Play Against AI:</strong> choose Easy, Medium or Hard and pick X or O. Win in a row to build a streak.</li>
+          <li><strong>Restart Round</strong> clears the board. <strong>New Game</strong> starts a fresh match. Scores are kept until you reset them.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ===================== SETTINGS ===================== -->
+    <section class="screen" id="screen-settings" data-screen="settings">
+      <header class="topbar">
+        <button class="icon-btn" data-action="back" aria-label="Back">&#8249;</button>
+        <h2 class="screen-title">Settings</h2>
+        <span class="spacer"></span>
+      </header>
+
+      <div class="card">
+        <label class="switch-row">
+          <span>Sound effects</span>
+          <input type="checkbox" id="set-sound" />
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="switch-row">
+          <span>Vibration</span>
+          <input type="checkbox" id="set-vibe" />
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+        <label class="switch-row">
+          <span>Fast mode (5-second turns)</span>
+          <input type="checkbox" id="set-timer" />
+          <span class="switch" aria-hidden="true"></span>
+        </label>
+      </div>
+
+      <div class="card">
+        <h3 class="label">Theme</h3>
+        <div class="segmented" id="theme-group">
+          <button data-theme-set="neon">Neon</button>
+          <button data-theme-set="retro">Retro</button>
+          <button data-theme-set="light">Light</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="label">Player names (Two Player)</h3>
+        <label class="name-row"><span>Player 1 (X)</span>
+          <input class="name-input" id="set-p1" maxlength="14" type="text" />
+        </label>
+        <label class="name-row"><span>Player 2 (O)</span>
+          <input class="name-input" id="set-p2" maxlength="14" type="text" />
+        </label>
+      </div>
+
+      <div class="card">
+        <button class="btn" data-action="tutorial">Replay Tutorial</button>
+        <button class="btn" data-action="clear-history">Clear Match History</button>
+        <button class="btn btn-danger" data-action="reset-scores">Reset Scores</button>
+      </div>
+
+      <p class="footer-note">XOX Arena v2.0 &middot; Works fully offline</p>
+    </section>
+  </div>
+
+  <!-- First-launch tutorial -->
+  <div class="modal" id="tutorial" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tut-title">
+      <h3 id="tut-title">How XOX Arena works</h3>
+      <p id="tut-text"></p>
+      <div class="dots" id="tut-dots"></div>
+      <div class="modal-actions">
+        <button class="btn" id="tut-skip">Skip</button>
+        <button class="btn btn-primary" id="tut-next">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation dialog (used before destructive actions) -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 id="modal-title"></h3>
+      <p id="modal-msg"></p>
+      <div class="modal-actions">
+        <button class="btn" id="modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="modal-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+/**
+ * XOX ARENA v2 — game logic, AI, power-ups, timer, achievements, UI and native hooks.
+ * Everything runs locally, so no internet connection is needed.
+ *
+ * Sections (search for the headings):
+ *   1. Constants & helpers      4. Game flow        7. Navigation & back button
+ *   2. Storage                  5. Rendering        8. Event wiring & init
+ *   3. Rules & AI               6. Sound & effects
+ */
+(function () {
+  'use strict';
+
+  /* =====================================================================
+     1. CONSTANTS & HELPERS
+     ===================================================================== */
+
+  const STORAGE_KEY = 'xoxarena.v1';
+  const MAX_HISTORY = 50;
+  const TURN_MS = 5000;                       // Fast mode: time allowed per turn
+  const THEMES = ['neon', 'retro', 'light'];
+
+  // All eight winning lines on a 3x3 board (cell indexes 0-8)
+  const WIN_LINES = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+  ];
+
+  const ACHIEVEMENTS = {
+    first_win:  { title: 'First Victory',    desc: 'Win your first round' },
+    beat_hard:  { title: 'Giant Killer',     desc: 'Beat the Hard CPU' },
+    streak3:    { title: 'On Fire',          desc: 'Win 3 rounds in a row against the CPU' },
+    power_user: { title: 'Trickster',        desc: 'Use a power-up' },
+    draws5:     { title: 'Stalemate Master', desc: 'Reach 5 draws in total' },
+    marathon:   { title: 'Marathon',         desc: 'Play 25 rounds' }
+  };
+
+  const TUTORIAL = [
+    'Welcome to XOX Arena! Line up three of your symbols in a row to win the round.',
+    'Power-ups: each round you get one Freeze and one Swap. Using a power-up takes your turn.',
+    'Play against the CPU or a friend. Build win streaks, unlock achievements, and try Fast mode for a 5-second timer.'
+  ];
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const other = (sym) => (sym === 'X' ? 'O' : 'X');
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const emptyCells = (b) => b.map((v, i) => (v ? null : i)).filter((i) => i !== null);
+
+  /** Shuffles an array so AI ties don't always pick the same cell. */
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /** Escapes text before putting it into innerHTML. */
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  /* =====================================================================
+     2. STORAGE (localStorage)
+     ===================================================================== */
+
+  const defaultPrefs = {
+    sound: true,
+    vibrate: true,
+    timer: false,            // Fast mode off by default
+    theme: 'neon',
+    p1Name: 'Player 1',
+    p2Name: 'Player 2',
+    tutorialSeen: false,
+    lastMode: 'ai',          // what "Play Now" starts: 'ai' or 'two'
+    difficulty: 'medium',
+    humanSymbol: 'X'
+  };
+
+  /** Loads saved data, falling back to defaults if missing or corrupt. */
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        return {
+          prefs: { ...defaultPrefs, ...(d.prefs || {}) },
+          scores: { p1: 0, p2: 0, draws: 0, ...(d.scores || {}) },
+          history: Array.isArray(d.history) ? d.history : [],
+          streak: Number(d.streak) || 0,
+          achievements: { ...(d.achievements || {}) }
+        };
+      }
+    } catch (e) {
+      console.warn('Could not read saved data, starting fresh.', e);
+    }
+    return {
+      prefs: { ...defaultPrefs },
+      scores: { p1: 0, p2: 0, draws: 0 },
+      history: [],
+      streak: 0,
+      achievements: {}
+    };
+  }
+
+  /** Saves everything. Wrapped in try/catch in case storage is full or blocked. */
+  function saveStore() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    } catch (e) {
+      console.warn('Could not save data.', e);
+    }
+  }
+
+  const store = loadStore();
+
+  /** Total rounds played since scores were last reset. */
+  const totalRounds = () => store.scores.p1 + store.scores.p2 + store.scores.draws;
+
+  /** Unlocks an achievement once and tells the player. Caller saves. */
+  function unlock(key) {
+    if (store.achievements[key]) return;
+    store.achievements[key] = Date.now();
+    toast(`Achievement unlocked: ${ACHIEVEMENTS[key].title}`);
+  }
+
+  /* =====================================================================
+     3. RULES & AI
+     ===================================================================== */
+
+  /** Returns { symbol, line } if someone has three in a row, otherwise null. */
+  function findWin(b) {
+    for (const line of WIN_LINES) {
+      const [a, c, d] = line;
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return { symbol: b[a], line };
+    }
+    return null;
+  }
+
+  /** Returns a cell that completes three for `sym`, or -1 if none. */
+  function findWinningMove(b, sym) {
+    for (const i of emptyCells(b)) {
+      b[i] = sym;
+      const w = findWin(b);
+      b[i] = null;
+      if (w) return i;
+    }
+    return -1;
+  }
+
+  /** MEDIUM: take a win, block a win, take the centre, then a corner. */
+  function mediumMove(b, ai, human) {
+    const win = findWinningMove(b, ai);
+    if (win !== -1) return win;
+    const block = findWinningMove(b, human);
+    if (block !== -1) return block;
+    if (!b[4]) return 4;
+    const corners = [0, 2, 6, 8].filter((i) => !b[i]);
+    if (corners.length) return pick(corners);
+    return pick(emptyCells(b));
+  }
+
+  /**
+   * Minimax with alpha-beta pruning. Scores favour quick wins (depth bonus)
+   * and delay losses. Returns the score from the AI's point of view.
+   */
+  function minimax(b, depth, isMax, ai, human, alpha, beta) {
+    const w = findWin(b);
+    if (w) return w.symbol === ai ? 10 - depth : depth - 10;
+    if (b.every(Boolean)) return 0;
+
+    if (isMax) {
+      let best = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (b[i]) continue;
+        b[i] = ai;
+        best = Math.max(best, minimax(b, depth + 1, false, ai, human, alpha, beta));
+        b[i] = null;
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = human;
+      best = Math.min(best, minimax(b, depth + 1, true, ai, human, alpha, beta));
+      b[i] = null;
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+
+  /** HARD: try every move with minimax and keep the best (ties broken randomly). */
+  function bestMinimaxMove(b, ai, human) {
+    let bestScore = -Infinity;
+    let bestMove = -1;
+    for (const i of shuffle(emptyCells(b))) {
+      b[i] = ai;
+      const score = minimax(b, 1, false, ai, human, -Infinity, Infinity);
+      b[i] = null;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = i;
+      }
+    }
+    return bestMove;
+  }
+
+  /**
+   * Picks the CPU's move by difficulty.
+   * Easy: 85% random. Medium: heuristic. Hard: minimax.
+   * The CPU does not use power-ups.
+   */
+  function chooseAIMove() {
+    const cpu = game.turn;
+    const human = other(cpu);
+    const b = game.board.slice();
+    if (game.difficulty === 'easy') {
+      return Math.random() < 0.85 ? pick(emptyCells(b)) : mediumMove(b, cpu, human);
+    }
+    if (game.difficulty === 'hard') return bestMinimaxMove(b, cpu, human);
+    return mediumMove(b, cpu, human);
+  }
+
+  /* =====================================================================
+     4. GAME FLOW
+     ===================================================================== */
+
+  // Current match state (not saved; scores, history and streak are saved)
+  const game = {
+    mode: 'two',                  // 'two' or 'ai'
+    difficulty: 'medium',
+    human: 'X',                   // human's symbol in AI mode
+    board: Array(9).fill(null),
+    turn: 'X',
+    over: false,
+    round: 1,
+    aiTimer: null,
+    powers: { X: { freeze: 1, swap: 1 }, O: { freeze: 1, swap: 1 } },   // reset every round
+    pending: null,                // { type:'freeze' } or { type:'swap', from:null } while choosing
+    frozen: null,                 // { idx, blockedFor } — cell the opponent can't use yet
+    timerId: null,
+    timeLeft: TURN_MS,
+    lastShare: ''
+  };
+
+  /** True when the CPU is to move and the round is live. */
+  const isAITurn = () => game.mode === 'ai' && !game.over && game.turn !== game.human;
+
+  /** Maps a symbol to its score role: 'p1' (Player 1 / You) or 'p2' (Player 2 / CPU). */
+  function roleOf(sym) {
+    if (game.mode === 'two') return sym === 'X' ? 'p1' : 'p2';
+    return sym === game.human ? 'p1' : 'p2';
+  }
+
+  /** Display name for a role. */
+  function nameOf(role) {
+    if (game.mode === 'two') return role === 'p1' ? store.prefs.p1Name : store.prefs.p2Name;
+    return role === 'p1' ? 'You' : 'CPU';
+  }
+
+  /** Scoreboard labels for the current mode. */
+  function labelsFor() {
+    if (game.mode === 'two') {
+      return { p1: { name: store.prefs.p1Name, sym: 'X' }, p2: { name: store.prefs.p2Name, sym: 'O' } };
+    }
+    return { p1: { name: 'You', sym: game.human }, p2: { name: 'CPU', sym: other(game.human) } };
+  }
+
+  /** True if cell i is frozen against `sym`. */
+  function isFrozenFor(i, sym) {
+    return !!(game.frozen && game.frozen.idx === i && game.frozen.blockedFor === sym);
+  }
+
+  /** Starts a new match with the chosen mode and opens the game screen. */
+  function startGame(opts) {
+    Object.assign(game, {
+      mode: opts.mode,
+      difficulty: opts.difficulty || 'medium',
+      human: opts.human || 'X',
+      round: 1
+    });
+    store.prefs.lastMode = game.mode;
+    if (game.mode === 'ai') {
+      store.prefs.difficulty = game.difficulty;
+      store.prefs.humanSymbol = game.human;
+    }
+    saveStore();
+
+    $('#mode-label').textContent = game.mode === 'two' ? 'Two Player' : `vs CPU · ${cap(game.difficulty)}`;
+    renderScores();
+    renderHistory();
+    newRound(false);
+    navigate('game');
+  }
+
+  /**
+   * Clears the board and starts a round.
+   * @param {boolean} countAsNew  true for "Restart Round" (increments the round counter)
+   */
+  function newRound(countAsNew) {
+    clearTimeout(game.aiTimer);
+    stopTimer();
+    game.board = Array(9).fill(null);
+    game.turn = 'X';
+    game.over = false;
+    game.pending = null;
+    game.frozen = null;
+    game.lastShare = '';
+    game.powers = { X: { freeze: 1, swap: 1 }, O: { freeze: 1, swap: 1 } };
+    if (countAsNew) game.round++;
+
+    $('#round-num').textContent = game.round;
+    $('#share-btn').hidden = true;
+    resetBoardVisuals();
+    paintBoard();
+    showResult('');
+    updateTurnText();
+    updatePowerUI();
+    updateStreakUI();
+    startTurnTimer();
+    if (isAITurn()) scheduleAI();
+  }
+
+  /** "New Game": fresh match with the same settings. Scores are kept. */
+  function newGame() {
+    game.round = 1;
+    newRound(false);
+    toast('New game started');
+  }
+
+  /** Places a mark, then checks for a win, a draw, or passes the turn. */
+  function place(i, sym) {
+    game.board[i] = sym;
+    paintCell(i);
+    sfx.place();
+    afterMove(sym);
+  }
+
+  /** Runs after any move (placing or swapping): win, draw, or pass the turn. */
+  function afterMove(sym) {
+    const win = findWin(game.board);
+    if (win) return finishRound(win);
+    if (game.board.every(Boolean)) return finishRound(null);
+    passTurn(sym);
+  }
+
+  /**
+   * Ends `sym`'s turn. Clears a freeze that was waiting on this player,
+   * switches to the other player, and restarts the timer or the CPU move.
+   */
+  function passTurn(sym) {
+    if (game.frozen && game.frozen.blockedFor === sym) game.frozen = null;
+    game.turn = other(sym);
+    paintBoard();
+    updateTurnText();
+    updatePowerUI();
+    startTurnTimer();
+    if (isAITurn()) scheduleAI();
+  }
+
+  /** Handles a tap on a board cell (normal play, or the target of a power-up). */
+  function onCellTap(i) {
+    if (game.over) return;
+    if (game.pending) return handlePending(i);
+    if (isAITurn()) return;
+    if (game.board[i]) return;
+    if (isFrozenFor(i, game.turn)) return blockedTap();
+    vibrate(12);
+    place(i, game.turn);
+  }
+
+  /** Feedback when someone taps a frozen cell. */
+  function blockedTap() {
+    toast('That cell is frozen');
+    const w = $('#board-wrap');
+    w.classList.remove('shake');
+    void w.offsetWidth;
+    w.classList.add('shake');
+  }
+
+  /* ---------- Power-ups ---------- */
+
+  /** Arms Freeze or Swap for the player whose turn it is. Tap again to cancel. */
+  function togglePower(type) {
+    if (game.over || isAITurn()) return;
+    const sym = game.turn;
+    if (game.pending && game.pending.type === type) {
+      game.pending = null;
+      paintBoard();
+      updatePowerUI();
+      toast('Power-up cancelled');
+      return;
+    }
+    if (game.powers[sym][type] <= 0) {
+      toast(`No ${type} left this round`);
+      return;
+    }
+    game.pending = { type, from: null };
+    paintBoard();
+    updatePowerUI();
+    toast(type === 'freeze' ? 'Tap an empty cell to freeze it' : 'Tap one of your marks to move it');
+  }
+
+  /** Completes the armed power-up using the tapped cell. */
+  function handlePending(i) {
+    const sym = game.turn;
+    const p = game.pending;
+
+    if (p.type === 'freeze') {
+      if (game.board[i]) return toast('Choose an empty cell to freeze');
+      game.powers[sym].freeze--;
+      game.frozen = { idx: i, blockedFor: other(sym) };   // opponent can't use it on their next turn
+      game.pending = null;
+      markPowerUsed();
+      toast("Cell frozen for the opponent's next turn");
+      passTurn(sym);
+      return;
+    }
+
+    // Swap: first pick your own mark, then an empty cell
+    if (p.from === null) {
+      if (game.board[i] !== sym) return toast('Tap one of your own marks first');
+      p.from = i;
+      paintBoard();
+      toast('Now tap an empty cell to move it there');
+      return;
+    }
+    if (i === p.from) {
+      p.from = null;
+      paintBoard();
+      toast('Swap cancelled');
+      return;
+    }
+    if (game.board[i]) return toast('Choose an empty cell');
+    if (isFrozenFor(i, sym)) return blockedTap();
+
+    game.board[p.from] = null;
+    game.board[i] = sym;
+    game.powers[sym].swap--;
+    game.pending = null;
+    markPowerUsed();
+    paintBoard();
+    sfx.place();
+    afterMove(sym);
+  }
+
+  function markPowerUsed() {
+    unlock('power_user');
+    saveStore();
+  }
+
+  /* ---------- Fast mode timer ---------- */
+
+  /** (Re)starts the per-turn countdown for human turns when Fast mode is on. */
+  function startTurnTimer() {
+    stopTimer();
+    const el = $('#timer');
+    if (!store.prefs.timer || game.over || isAITurn()) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    game.timeLeft = TURN_MS;
+    renderTimer();
+    game.timerId = setInterval(() => {
+      game.timeLeft -= 100;
+      renderTimer();
+      if (game.timeLeft <= 0) {
+        stopTimer();
+        timeUp();
+      }
+    }, 100);
+  }
+
+  function stopTimer() {
+    clearInterval(game.timerId);
+    game.timerId = null;
+  }
+
+  function renderTimer() {
+    const pct = Math.max(0, (game.timeLeft / TURN_MS) * 100);
+    const fill = $('#timer-fill');
+    fill.style.width = pct + '%';
+    fill.classList.toggle('low', pct < 30);
+  }
+
+  /** The player whose turn it was ran out of time, so the opponent wins the round. */
+  function timeUp() {
+    if (game.over) return;
+    finishRound({ symbol: other(game.turn), line: null, timeout: true });
+  }
+
+  /* ---------- CPU turn ---------- */
+
+  /** Waits a short "thinking" delay, then plays the CPU's move. */
+  function scheduleAI() {
+    clearTimeout(game.aiTimer);
+    updateTurnText();
+    const delay = { easy: 450, medium: 600, hard: 700 }[game.difficulty];
+    game.aiTimer = setTimeout(() => {
+      if (game.over || !isAITurn()) return;
+      const move = chooseAIMove();
+      if (move !== -1) place(move, game.turn);
+    }, delay);
+  }
+
+  /* ---------- Round end ---------- */
+
+  /**
+   * Ends the round: updates scores, streak, achievements and history,
+   * then shows the result and plays the effects.
+   * @param {{symbol:string,line:number[]|null,timeout?:boolean}|null} win  null = draw
+   */
+  function finishRound(win) {
+    game.over = true;
+    game.pending = null;
+    stopTimer();
+    clearTimeout(game.aiTimer);
+
+    const moves = game.board.filter(Boolean).length;
+    let role = null;
+    let msg;
+    let cls;
+
+    if (!win) {
+      store.scores.draws++;
+      msg = "It's a draw!";
+      cls = 'draw';
+      sfx.draw();
+      $('#board-wrap').classList.add('shake');
+    } else {
+      role = roleOf(win.symbol);
+      store.scores[role]++;
+      if (win.line) highlightWin(win.line);
+
+      if (game.mode === 'two') {
+        msg = `${nameOf(role)} (${win.symbol}) wins!`;
+      } else {
+        msg = role === 'p1' ? 'You win!' : 'CPU wins!';
+      }
+      if (win.timeout) msg = "Time's up! " + msg;
+
+      const humanWon = game.mode === 'two' || role === 'p1';
+      cls = humanWon ? 'win' : 'lose';
+      if (humanWon) {
+        sfx.win();
+        confetti();
+      } else {
+        sfx.lose();
+        dimLosingCells();
+      }
+      vibrate([0, 40, 60, 40]);
+      updateScoreBump(role);
+    }
+
+    // Achievements and streak
+    if (game.mode === 'ai') {
+      store.streak = role === 'p1' ? store.streak + 1 : (role === 'p2' ? 0 : store.streak);
+      if (role === 'p1' && game.difficulty === 'hard') unlock('beat_hard');
+      if (store.streak >= 3) unlock('streak3');
+    }
+    if (role && (game.mode === 'two' || role === 'p1')) unlock('first_win');
+    if (store.scores.draws >= 5) unlock('draws5');
+    if (totalRounds() >= 25) unlock('marathon');
+
+    game.lastShare = buildShareText(role, moves);
+
+    updateTurnText();
+    updatePowerUI();
+    showResult(msg, cls);
+    $('#share-btn').hidden = false;
+
+    addHistory({
+      outcome: role || 'draw',
+      text: msg,
+      modeLabel: game.mode === 'two' ? 'Two Player' : `vs CPU · ${cap(game.difficulty)}`,
+      date: Date.now()
+    });
+    saveStore();
+    renderScores();
+    renderHistory();
+    renderHome();
+    updateStreakUI();
+  }
+
+  /** Text used by the Share Result button. */
+  function buildShareText(role, moves) {
+    const diff = cap(game.difficulty);
+    if (role === null) {
+      return game.mode === 'ai'
+        ? `Drew with the ${diff} CPU on XOX Arena in ${moves} moves!`
+        : `We drew a round of XOX Arena in ${moves} moves!`;
+    }
+    if (game.mode === 'two') return `${nameOf(role)} won a round of XOX Arena in ${moves} moves!`;
+    return role === 'p1'
+      ? `I beat the ${diff} CPU as ${game.human} in ${moves} moves on XOX Arena!`
+      : `The ${diff} CPU beat me on XOX Arena in ${moves} moves.`;
+  }
+
+  /** Opens the native share sheet, or copies the text when sharing isn't available. */
+  function shareResult() {
+    const text = game.lastShare || 'Check out XOX Arena!';
+    if (navigator.share) {
+      navigator.share({ title: 'XOX Arena', text }).catch(() => {});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => toast('Result copied to clipboard'))
+        .catch(() => toast('Could not copy the result'));
+    } else {
+      toast('Sharing is not supported here');
+    }
+  }
+
+  /* =====================================================================
+     5. RENDERING
+     ===================================================================== */
+
+  /** Animated SVG for X (two neon lines) or O (neon ring). pathLength="1" drives the draw-in effect. */
+  function symbolSVG(sym) {
+    if (sym === 'X') {
+      return `<svg class="mark mark-x" viewBox="0 0 100 100" aria-hidden="true">
+        <line x1="22" y1="22" x2="78" y2="78" pathLength="1" />
+        <line x1="78" y1="22" x2="22" y2="78" pathLength="1" />
+      </svg>`;
+    }
+    return `<svg class="mark mark-o" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="28" pathLength="1" />
+    </svg>`;
+  }
+
+  /** Creates the nine cells once. One listener on the board handles all taps. */
+  function buildBoard() {
+    const board = $('#board');
+    if (board.childElementCount) return;
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('button');
+      cell.className = 'cell';
+      cell.dataset.index = i;
+      cell.dataset.sym = '';
+      cell.setAttribute('aria-label', `Cell ${i + 1}, empty`);
+      board.appendChild(cell);
+    }
+    board.addEventListener('click', (e) => {
+      const cell = e.target.closest('.cell');
+      if (cell) onCellTap(Number(cell.dataset.index));
+    });
+  }
+
+  /** Redraws one cell only if its content changed, so other marks don't re-animate. */
+  function paintCell(i) {
+    const cell = $('#board').children[i];
+    const sym = game.board[i] || '';
+    if (cell.dataset.sym === sym) return;
+    cell.dataset.sym = sym;
+    cell.innerHTML = sym ? symbolSVG(sym) : '';
+    cell.setAttribute('aria-label', `Cell ${i + 1}, ${sym || 'empty'}`);
+  }
+
+  /** Redraws all cells and the frozen / selected highlights. */
+  function paintBoard() {
+    for (let i = 0; i < 9; i++) paintCell(i);
+    const cells = $('#board').children;
+    for (let i = 0; i < 9; i++) {
+      cells[i].classList.toggle('frozen', isFrozenFor(i, game.turn) || (!!game.frozen && game.frozen.idx === i));
+      cells[i].classList.toggle('selected', !!(game.pending && game.pending.type === 'swap' && game.pending.from === i));
+    }
+  }
+
+  /** Removes win and lose highlights and hides the strike line. */
+  function resetBoardVisuals() {
+    $$('.cell').forEach((c) => c.classList.remove('win', 'lose'));
+    $('#strike').classList.remove('show');
+    $('#board-wrap').classList.remove('shake');
+  }
+
+  /** Centre of a cell in the 300x300 strike SVG. */
+  const cellCenter = (i) => ({ x: (i % 3) * 100 + 50, y: Math.floor(i / 3) * 100 + 50 });
+
+  /** Highlights the winning cells and draws the animated strike line. */
+  function highlightWin(line) {
+    const cells = $('#board').children;
+    line.forEach((i) => cells[i].classList.add('win'));
+
+    const a = cellCenter(line[0]);
+    const c = cellCenter(line[2]);
+    const ln = $('#strike line');
+    ln.setAttribute('x1', a.x);
+    ln.setAttribute('y1', a.y);
+    ln.setAttribute('x2', c.x);
+    ln.setAttribute('y2', c.y);
+    const strike = $('#strike');
+    strike.classList.remove('show');
+    void strike.getBoundingClientRect();   // restart the animation
+    strike.classList.add('show');
+  }
+
+  /** Dims the empty cells and the human's marks when the CPU wins. */
+  function dimLosingCells() {
+    $$('.cell').forEach((c) => {
+      if (!c.classList.contains('win')) c.classList.add('lose');
+    });
+  }
+
+  /** Shows the result banner with an optional colour class. */
+  function showResult(msg, cls) {
+    const el = $('#result');
+    el.textContent = msg;
+    el.className = 'result' + (msg ? ' show ' + (cls || '') : '');
+  }
+
+  /** Turn text under the scoreboard. */
+  function updateTurnText() {
+    const el = $('#turn-text');
+    el.dataset.turn = game.turn;
+    if (game.over) {
+      el.textContent = 'Round over';
+    } else if (game.mode === 'two') {
+      el.textContent = `${game.turn === 'X' ? store.prefs.p1Name : store.prefs.p2Name}'s turn · ${game.turn}`;
+    } else {
+      el.textContent = isAITurn() ? 'CPU is thinking…' : 'Your turn';
+    }
+  }
+
+  /** Power-up buttons show the count for whoever's turn it is. */
+  function updatePowerUI() {
+    const sym = game.turn;
+    const usable = !game.over && !isAITurn();
+    [['freeze', '#pwr-freeze', 'Freeze'], ['swap', '#pwr-swap', 'Swap']].forEach(([type, sel, label]) => {
+      const btn = $(sel);
+      const n = game.powers[sym][type];
+      btn.textContent = `${label} · ${n}`;
+      btn.disabled = !usable || n <= 0;
+      btn.classList.toggle('active', !!game.pending && game.pending.type === type);
+    });
+  }
+
+  /** Streak pill (AI mode only). */
+  function updateStreakUI() {
+    const el = $('#streak');
+    if (game.mode !== 'ai' || store.streak < 1) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.textContent = store.streak >= 3 ? `On fire · ${store.streak}` : `Streak ${store.streak}`;
+  }
+
+  /** Fills the scoreboard cards and draw count. */
+  function renderScores() {
+    const L = labelsFor();
+    setCard('p1', L.p1);
+    setCard('p2', L.p2);
+    $('#p1-count').textContent = store.scores.p1;
+    $('#p2-count').textContent = store.scores.p2;
+    $('#draw-count').textContent = store.scores.draws;
+  }
+
+  function setCard(role, info) {
+    const sym = $('#' + role + '-sym');
+    sym.textContent = info.sym;
+    sym.className = 'sym sym-' + info.sym.toLowerCase();
+    $('#' + role + '-name').textContent = info.name;
+  }
+
+  /** Briefly enlarges a score card after it changes. */
+  function updateScoreBump(role) {
+    const card = $('#card-' + role);
+    card.classList.remove('bump');
+    void card.offsetWidth;
+    card.classList.add('bump');
+  }
+
+  /** Adds a result to the top of history, keeping the latest MAX_HISTORY. */
+  function addHistory(entry) {
+    store.history.unshift(entry);
+    if (store.history.length > MAX_HISTORY) store.history.length = MAX_HISTORY;
+  }
+
+  /** Shows the 10 most recent matches. */
+  function renderHistory() {
+    const list = $('#history-list');
+    if (!store.history.length) {
+      list.innerHTML = '<li class="empty">No matches yet. Play a round to start your history.</li>';
+      return;
+    }
+    list.innerHTML = store.history.slice(0, 10).map((h) => `
+      <li class="hist-item ${escapeHTML(h.outcome)}">
+        <span class="hist-text">${escapeHTML(h.text)}</span>
+        <span class="hist-meta">${escapeHTML(h.modeLabel)} · ${new Date(h.date).toLocaleString([], {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        })}</span>
+      </li>`).join('');
+  }
+
+  /** Achievements screen: unlocked badges are bright, locked ones are dimmed. */
+  function renderTrophies() {
+    const keys = Object.keys(ACHIEVEMENTS);
+    const done = keys.filter((k) => store.achievements[k]).length;
+    $('#trophy-count').textContent = `${done} of ${keys.length} unlocked`;
+    $('#trophy-list').innerHTML = keys.map((k) => {
+      const a = ACHIEVEMENTS[k];
+      const on = !!store.achievements[k];
+      return `<li class="trophy${on ? '' : ' locked'}">
+        <span class="trophy-icon">${on ? '&#9733;' : '&#8226;'}</span>
+        <span><strong>${escapeHTML(a.title)}</strong><br><small>${escapeHTML(a.desc)}</small></span>
+      </li>`;
+    }).join('');
+  }
+
+  /** Home footer: total rounds and draws. */
+  function renderHome() {
+    const s = store.scores;
+    $('#home-score').textContent = totalRounds()
+      ? `Rounds played: ${totalRounds()}  ·  Draws: ${s.draws}`
+      : 'No rounds played yet';
+  }
+
+  function syncMuteBtn() {
+    const b = $('#mute-btn');
+    b.classList.toggle('muted', !store.prefs.sound);
+    b.setAttribute('aria-pressed', String(store.prefs.sound));
+  }
+
+  /** Applies the chosen theme (neon is the default; retro and light are overrides in CSS). */
+  function applyTheme() {
+    const t = THEMES.includes(store.prefs.theme) ? store.prefs.theme : 'neon';
+    document.documentElement.dataset.theme = t;
+  }
+
+  /** Settings screen: sync every control with saved preferences. */
+  function syncSettingsUI() {
+    $('#set-sound').checked = store.prefs.sound;
+    $('#set-vibe').checked = store.prefs.vibrate;
+    $('#set-timer').checked = store.prefs.timer;
+    $('#set-p1').value = store.prefs.p1Name;
+    $('#set-p2').value = store.prefs.p2Name;
+    $$('#theme-group button').forEach((b) => b.classList.toggle('selected', b.dataset.themeSet === store.prefs.theme));
+  }
+
+  /** AI setup screen: highlight the chosen difficulty and symbol. */
+  const HINTS = {
+    easy: 'Relaxed play. The CPU mostly makes random moves.',
+    medium: 'Solid play. The CPU blocks threats and grabs open wins.',
+    hard: 'Near-perfect play. The CPU uses minimax and rarely misses.'
+  };
+  const setup = { difficulty: 'medium', symbol: 'X' };
+
+  function syncSetupUI() {
+    $$('#difficulty-group button').forEach((b) => b.classList.toggle('selected', b.dataset.diff === setup.difficulty));
+    $$('#symbol-group button').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.sym === setup.symbol);
+      b.innerHTML = symbolSVG(b.dataset.sym);
+    });
+    $('#diff-hint').textContent = HINTS[setup.difficulty];
+  }
+
+  /* =====================================================================
+     6. SOUND & EFFECTS
+     ===================================================================== */
+
+  /** Synthesised sounds via the Web Audio API (no audio files needed). */
+  const sfx = (() => {
+    let ctx = null;
+
+    function audio() {
+      if (!store.prefs.sound) return null;
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+
+    /** One short tone with a quick fade-in and fade-out. */
+    function tone(freq, start, dur, type = 'sine', vol = 0.15) {
+      const a = audio();
+      if (!a) return;
+      const t = a.currentTime + start;
+      const osc = a.createOscillator();
+      const gain = a.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(vol, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain).connect(a.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+
+    return {
+      tap() { tone(720, 0, 0.08, 'triangle', 0.2); },
+      place() { tone(520, 0, 0.12, 'sine', 0.25); tone(780, 0.04, 0.1, 'sine', 0.12); },
+      win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, i * 0.1, 0.25, 'triangle', 0.2)); },
+      lose() { [400, 320, 240].forEach((f, i) => tone(f, i * 0.14, 0.22, 'sawtooth', 0.1)); },
+      draw() { tone(440, 0, 0.2, 'sine', 0.18); tone(392, 0.18, 0.25, 'sine', 0.18); }
+    };
+  })();
+
+  /** Short vibration on devices that support it. */
+  function vibrate(pattern) {
+    if (store.prefs.vibrate && navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  /** Confetti burst for wins. */
+  function confetti() {
+    const fx = $('#fx');
+    const colors = ['#27f3ff', '#b55cff', '#ffffff', '#4dffb4', '#ff4d7a'];
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('i');
+      p.className = 'confetti-piece';
+      p.style.left = Math.random() * 100 + 'vw';
+      p.style.background = pick(colors);
+      p.style.animationDuration = (1.8 + Math.random() * 1.6) + 's';
+      p.style.animationDelay = (Math.random() * 0.4) + 's';
+      p.style.transform = `rotate(${Math.random() * 360}deg)`;
+      fx.appendChild(p);
+      setTimeout(() => p.remove(), 4000);
+    }
+  }
+
+  /* =====================================================================
+     7. NAVIGATION, BACK BUTTON, DIALOGS
+     ===================================================================== */
+
+  const navStack = ['home'];
+
+  /** Shows a screen. The timer only runs while the game screen is visible. */
+  function showScreen(name) {
+    $$('.screen').forEach((s) => s.classList.toggle('active', s.dataset.screen === name));
+    $('#screen-' + name).scrollTop = 0;
+    if (name === 'game') {
+      if (!game.over) startTurnTimer();
+    } else {
+      stopTimer();
+    }
+  }
+
+  function navigate(name) {
+    if (navStack[navStack.length - 1] !== name) navStack.push(name);
+    showScreen(name);
+  }
+
+  /**
+   * Back button (on-screen and Android hardware):
+   *   1. Close the tutorial or confirmation dialog if open.
+   *   2. Otherwise go back one screen.
+   *   3. On the home screen, exit the app.
+   */
+  function goBack() {
+    if (!$('#tutorial').hidden) {
+      closeTutorial();
+      return;
+    }
+    if (!$('#modal').hidden) {
+      closeModal();
+      return;
+    }
+    if (navStack.length > 1) {
+      navStack.pop();
+      showScreen(navStack[navStack.length - 1]);
+      return;
+    }
+    exitApp();
+  }
+
+  /* ---------- Tutorial ---------- */
+  let tutPage = 0;
+
+  function openTutorial() {
+    tutPage = 0;
+    renderTutorial();
+    $('#tutorial').hidden = false;
+  }
+
+  function renderTutorial() {
+    $('#tut-text').textContent = TUTORIAL[tutPage];
+    $('#tut-next').textContent = tutPage === TUTORIAL.length - 1 ? 'Got it' : 'Next';
+    $('#tut-dots').innerHTML = TUTORIAL.map((_, i) => `<span class="dot${i === tutPage ? ' on' : ''}"></span>`).join('');
+  }
+
+  function nextTutorial() {
+    if (tutPage < TUTORIAL.length - 1) {
+      tutPage++;
+      renderTutorial();
+    } else {
+      closeTutorial();
+    }
+  }
+
+  function closeTutorial() {
+    $('#tutorial').hidden = true;
+    if (!store.prefs.tutorialSeen) {
+      store.prefs.tutorialSeen = true;
+      saveStore();
+    }
+  }
+
+  /* ---------- Confirmation dialog ---------- */
+  let modalAction = null;
+
+  function askConfirm(title, msg, okLabel, onOk) {
+    $('#modal-title').textContent = title;
+    $('#modal-msg').textContent = msg;
+    $('#modal-ok').textContent = okLabel;
+    modalAction = onOk;
+    $('#modal').hidden = false;
+  }
+
+  function closeModal() {
+    $('#modal').hidden = true;
+    modalAction = null;
+  }
+
+  function askResetScores() {
+    askConfirm('Reset all scores?', 'Wins, losses and draws will be cleared. This cannot be undone.', 'Reset', () => {
+      store.scores = { p1: 0, p2: 0, draws: 0 };
+      store.streak = 0;
+      saveStore();
+      renderScores();
+      renderHome();
+      toast('Scores reset');
+    });
+  }
+
+  function askClearHistory() {
+    askConfirm('Clear match history?', 'All saved matches will be removed.', 'Clear', () => {
+      store.history = [];
+      saveStore();
+      renderHistory();
+      toast('History cleared');
+    });
+  }
+
+  /* ---------- Toast ---------- */
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  /* ---------- Capacitor (native Android) ---------- */
+  const Cap = window.Capacitor;
+  const Plugins = (Cap && Cap.Plugins) || {};
+  const isNative = () => !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());
+
+  /** Closes the app. Only works inside the Android app. */
+  function exitApp() {
+    if (Plugins.App) Plugins.App.exitApp();
+  }
+
+  /** Hardware back button -> goBack(); status bar styled to match the app. */
+  function initNative() {
+    if (Plugins.App && Plugins.App.addListener) {
+      Plugins.App.addListener('backButton', goBack);
+    }
+    if (isNative() && Plugins.StatusBar) {
+      Plugins.StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      Plugins.StatusBar.setStyle({ style: 'DARK' }).catch(() => {});
+      Plugins.StatusBar.setBackgroundColor({ color: '#0A0614' }).catch(() => {});
+    }
+  }
+
+  /* =====================================================================
+     8. EVENT WIRING & INIT
+     ===================================================================== */
+
+  /** Trims a typed name, limits it to 14 characters, and falls back to a default if empty. */
+  function cleanName(value, fallback) {
+    return String(value || '').trim().slice(0, 14) || fallback;
+  }
+
+  /** Opens the Two Player name screen, pre-filled with the last names used. */
+  function openTwoSetup() {
+    $('#two-p1').value = store.prefs.p1Name;
+    $('#two-p2').value = store.prefs.p2Name;
+    navigate('two');
+  }
+
+  /** Actions for elements with data-action="..." */
+  const actions = {
+    'play-now': () => {
+      if (store.prefs.lastMode === 'two') openTwoSetup();
+      else startGame({ mode: 'ai', difficulty: store.prefs.difficulty, human: store.prefs.humanSymbol });
+    },
+    'two-player': openTwoSetup,
+    'start-two': () => {
+      // Read the names typed on the setup screen, save them, then start the match
+      store.prefs.p1Name = cleanName($('#two-p1').value, 'Player 1');
+      store.prefs.p2Name = cleanName($('#two-p2').value, 'Player 2');
+      saveStore();
+      startGame({ mode: 'two' });
+    },
+    'ai-setup': () => {
+      setup.difficulty = store.prefs.difficulty;
+      setup.symbol = store.prefs.humanSymbol;
+      syncSetupUI();
+      navigate('ai');
+    },
+    'start-ai': () => startGame({ mode: 'ai', difficulty: setup.difficulty, human: setup.symbol }),
+    'trophies': () => {
+      renderTrophies();
+      navigate('trophies');
+    },
+    'how': () => navigate('how'),
+    'settings': () => {
+      syncSettingsUI();
+      navigate('settings');
+    },
+    'back': goBack,
+    'restart-round': () => {
+      newRound(true);
+      toast('Round restarted');
+    },
+    'new-game': newGame,
+    'share': shareResult,
+    'tutorial': openTutorial,
+    'clear-history': askClearHistory,
+    'reset-scores': askResetScores
+  };
+
+  function setupInteractions() {
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (el && actions[el.dataset.action]) actions[el.dataset.action]();
+    });
+
+    $('#difficulty-group').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-diff]');
+      if (!b) return;
+      setup.difficulty = b.dataset.diff;
+      store.prefs.difficulty = setup.difficulty;
+      saveStore();
+      syncSetupUI();
+    });
+
+    $('#symbol-group').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-sym]');
+      if (!b) return;
+      setup.symbol = b.dataset.sym;
+      store.prefs.humanSymbol = setup.symbol;
+      saveStore();
+      syncSetupUI();
+    });
+
+    $('#power-row').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-power]');
+      if (b && !b.disabled) togglePower(b.dataset.power);
+    });
+
+    $('#mute-btn').addEventListener('click', () => {
+      store.prefs.sound = !store.prefs.sound;
+      saveStore();
+      syncMuteBtn();
+      syncSettingsUI();
+      if (store.prefs.sound) sfx.tap();
+    });
+
+    // Settings controls
+    $('#set-sound').addEventListener('change', (e) => {
+      store.prefs.sound = e.target.checked;
+      saveStore();
+      syncMuteBtn();
+      if (store.prefs.sound) sfx.tap();
+    });
+
+    $('#set-vibe').addEventListener('change', (e) => {
+      store.prefs.vibrate = e.target.checked;
+      saveStore();
+      if (store.prefs.vibrate) vibrate(15);
+    });
+
+    $('#set-timer').addEventListener('change', (e) => {
+      store.prefs.timer = e.target.checked;
+      saveStore();
+      startTurnTimer();
+      toast(store.prefs.timer ? 'Fast mode on: 5 seconds per turn' : 'Fast mode off');
+    });
+
+    $('#theme-group').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-theme-set]');
+      if (!b) return;
+      store.prefs.theme = b.dataset.themeSet;
+      saveStore();
+      applyTheme();
+      syncSettingsUI();
+    });
+
+    $('#set-p1').addEventListener('change', (e) => {
+      store.prefs.p1Name = e.target.value.trim().slice(0, 14) || 'Player 1';
+      e.target.value = store.prefs.p1Name;
+      saveStore();
+      renderScores();
+      updateTurnText();
+    });
+
+    $('#set-p2').addEventListener('change', (e) => {
+      store.prefs.p2Name = e.target.value.trim().slice(0, 14) || 'Player 2';
+      e.target.value = store.prefs.p2Name;
+      saveStore();
+      renderScores();
+      updateTurnText();
+    });
+
+    // Tutorial buttons
+    $('#tut-next').addEventListener('click', nextTutorial);
+    $('#tut-skip').addEventListener('click', closeTutorial);
+
+    // Confirmation dialog
+    $('#modal-cancel').addEventListener('click', closeModal);
+    $('#modal-ok').addEventListener('click', () => {
+      const fn = modalAction;
+      closeModal();
+      if (fn) fn();
+    });
+    $('#modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') closeModal();
+    });
+
+    // Escape acts like Back (useful when testing in a desktop browser)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') goBack();
+    });
+  }
+
+  function init() {
+    game.mode = 'two';          // labels until a match starts
+    buildBoard();
+    applyTheme();
+    syncSettingsUI();
+    syncMuteBtn();
+    renderScores();
+    renderHistory();
+    renderHome();
+    setupInteractions();
+    initNative();
+    if (!store.prefs.tutorialSeen) openTutorial();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+
+</script>
+</body>
+</html>
